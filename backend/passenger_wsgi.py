@@ -1,27 +1,26 @@
 import os
+import sys
 import traceback
 
-# Force pure python implementation of protobuf to avoid C-extension errors
+# 1. ENVIROMENT FIX (MUST BE AT THE TOP)
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
-# 1. Setup paths
-# NOTE: Replace 'joidauz' with your actual cPanel username if different
+# 2. SETUP PATHS
 USERNAME = "joidauz"
 DOMAIN = "ansor.joida.uz"
 BASE_DIR = f"/home/{USERNAME}/{DOMAIN}/backend"
-PYTHON_VERSION = "3.14" # Match your cPanel selection
+PYTHON_VERSION = "3.14"
 
-# Path to your virtual environment site-packages
-# This will be created by cPanel "Setup Python App"
-VENV_PATH = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib/python{PYTHON_VERSION}/site-packages"
+# Path to your virtual environment site-packages (both lib and lib64)
+VENV_PATH_LIB = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib/python{PYTHON_VERSION}/site-packages"
+VENV_PATH_LIB64 = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib64/python{PYTHON_VERSION}/site-packages"
 
-if VENV_PATH not in sys.path:
-    sys.path.insert(0, VENV_PATH)
+# Add paths to sys.path
+for path in [VENV_PATH_LIB, VENV_PATH_LIB64, BASE_DIR]:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)
 
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
-
-# 2. Main application entry point for Passenger
+# 3. MAIN APPLICATION
 def application(environ, start_response):
     try:
         from a2wsgi import ASGIMiddleware
@@ -45,7 +44,12 @@ def application(environ, start_response):
             <h1 style="color: #ffffff;">Backend Startup Error (Diagnostic Mode)</h1>
             <hr/>
             <p><strong>Python Version:</strong> {sys.version}</p>
-            <p><strong>Path Check:</strong> {BASE_DIR}</p>
+            <p><strong>Checking Paths:</strong></p>
+            <ul>
+                <li>LIB: {VENV_PATH_LIB} (Exists: {os.path.exists(VENV_PATH_LIB)})</li>
+                <li>LIB64: {VENV_PATH_LIB64} (Exists: {os.path.exists(VENV_PATH_LIB64)})</li>
+                <li>BASE: {BASE_DIR} (Exists: {os.path.exists(BASE_DIR)})</li>
+            </ul>
             <hr/>
             <pre style="background: #000; padding: 15px; border-radius: 5px; overflow-x: auto;">{error_info}</pre>
         </body>
