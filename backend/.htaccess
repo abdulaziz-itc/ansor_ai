@@ -1,3 +1,6 @@
+# Force pure python implementation of protobuf
+SetEnv PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION python
+
 # cPanel Passenger Configuration
 PassengerAppRoot /home/joidauz/ansor.joida.uz/backend
 PassengerAppType wsgi
