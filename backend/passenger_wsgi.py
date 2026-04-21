@@ -1,6 +1,8 @@
-import sys
 import os
 import traceback
+
+# Force pure python implementation of protobuf to avoid C-extension errors
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 # 1. Setup paths
 # NOTE: Replace 'joidauz' with your actual cPanel username if different

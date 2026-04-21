@@ -1,3 +1,5 @@
+import '../../core/constants/api_constants.dart';
+
 class VideoUploadResponse {
   final String text;
   final String audioUrl;
@@ -10,9 +12,15 @@ class VideoUploadResponse {
   });
 
   factory VideoUploadResponse.fromJson(Map<String, dynamic> json) {
+    String url = json['audio_url'] ?? '';
+    // Prepend baseUrl if it's a relative path
+    if (url.startsWith('/')) {
+      url = '${ApiConstants.baseUrl}$url';
+    }
+
     return VideoUploadResponse(
       text: json['text'] ?? '',
-      audioUrl: json['audio_url'] ?? '',
+      audioUrl: url,
       createdAt: json['created_at'] != null 
         ? DateTime.parse(json['created_at']) 
         : DateTime.now(),
