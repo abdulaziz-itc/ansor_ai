@@ -5,7 +5,7 @@ SetEnv PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION python
 PassengerAppRoot /home/joidauz/ansor.joida.uz/backend
 PassengerAppType wsgi
 PassengerStartupFile passenger_wsgi.py
-PassengerPython /home/joidauz/virtualenv/ansor.joida.uz/backend/3.14/bin/python
+PassengerPython /home/joidauz/virtualenv/ansor.joida.uz/backend/3.11/bin/python
 
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f

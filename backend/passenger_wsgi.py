@@ -9,7 +9,7 @@ os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 USERNAME = "joidauz"
 DOMAIN = "ansor.joida.uz"
 BASE_DIR = f"/home/{USERNAME}/{DOMAIN}/backend"
-PYTHON_VERSION = "3.14"
+PYTHON_VERSION = "3.11"
 
 # Path to your virtual environment site-packages (both lib and lib64)
 VENV_PATH_LIB = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib/python{PYTHON_VERSION}/site-packages"
