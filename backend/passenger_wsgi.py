@@ -7,7 +7,7 @@ import traceback
 USERNAME = "joidauz"
 DOMAIN = "ansor.joida.uz"
 BASE_DIR = f"/home/{USERNAME}/{DOMAIN}/backend"
-PYTHON_VERSION = "3.11" # Change this if you select a different version in cPanel
+PYTHON_VERSION = "3.14" # Match your cPanel selection
 
 # Path to your virtual environment site-packages
 # This will be created by cPanel "Setup Python App"
