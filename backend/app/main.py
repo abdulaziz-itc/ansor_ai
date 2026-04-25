@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -23,6 +24,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include API routes
 app.include_router(endpoints.router)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Server Error: {str(exc)}"},
+    )
 
 @app.get("/")
 async def root():

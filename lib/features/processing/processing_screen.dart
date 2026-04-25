@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../data/repository/video_repository.dart';
 import '../result/result_screen.dart';
 import '../../core/theme/app_theme.dart';
@@ -49,11 +50,19 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
         );
       }
     } catch (e) {
+      String message = e.toString();
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map && data.containsKey('detail')) {
+          message = data['detail'];
+        }
+      }
+      
       if (mounted) {
         setState(() {
           _hasError = true;
           _statusText = 'Processing failed';
-          _errorMessage = e.toString();
+          _errorMessage = message;
         });
       }
     }

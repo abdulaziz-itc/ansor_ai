@@ -16,6 +16,15 @@ final dioProvider = Provider<Dio>((ref) {
     logPrint: (obj) => Logger().d(obj),
   ));
 
+  dio.interceptors.add(InterceptorsWrapper(
+    onError: (DioException e, handler) {
+      Logger().e('API Error: ${e.type} - ${e.message}\n'
+          'URL: ${e.requestOptions.uri}\n'
+          'Data: ${e.requestOptions.data}');
+      return handler.next(e);
+    },
+  ));
+
   return dio;
 });
 
