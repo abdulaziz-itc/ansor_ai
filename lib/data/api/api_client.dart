@@ -6,8 +6,8 @@ import 'package:logger/logger.dart';
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: ApiConstants.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 120),
+    receiveTimeout: const Duration(seconds: 120),
   ));
 
   dio.interceptors.add(LogInterceptor(
