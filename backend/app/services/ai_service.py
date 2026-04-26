@@ -12,7 +12,7 @@ class AIService:
     def __init__(self):
         api_key = os.getenv("GOOGLE_API_KEY")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-flash-latest')
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
 
     async def translate_video(self, video_path: str) -> str:
         """
@@ -45,7 +45,7 @@ class AIService:
         
         api_key = os.getenv("GOOGLE_API_KEY")
         # Let's try the -latest suffix just in case
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
         
         # Google API requires camelCase for JSON!
         payload = {
