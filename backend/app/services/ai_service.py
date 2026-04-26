@@ -27,9 +27,9 @@ class AIService:
 
         prompt = (
             "You are an expert in sign language translation. "
-            "Please watch this video and translate the sign language into clear Uzbek text. "
-            "Return only the translated text in Uzbek language, nothing else. "
-            "If no sign language is detected, describe what is happening in the video briefly in Uzbek language."
+            "Please watch this video and translate the sign language into clear Russian text. "
+            "Return only the translated text in Russian language, nothing else. "
+            "If no sign language is detected, describe what is happening in the video briefly in Russian language."
         )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
