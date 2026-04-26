@@ -39,11 +39,41 @@ class AIService:
             "If no sign language is detected, describe what is happening in the video briefly."
         )
 
-        response = self.model.generate_content([prompt, video_file])
+        # USE RAW REST API TO BYPASS SDK BUGS
+        import json
+        import urllib.request
+        
+        api_key = os.getenv("GOOGLE_API_KEY")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"file_data": {"mime_type": video_file.mime_type, "file_uri": video_file.uri}}
+                    ]
+                }
+            ]
+        }
+        
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={"Content-Type": "application/json"})
+        
+        try:
+            with urllib.request.urlopen(req) as api_response:
+                result = json.loads(api_response.read().decode('utf-8'))
+                text_response = result['candidates'][0]['content']['parts'][0]['text']
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            print(f"REST API HTTP Error: {error_body}")
+            raise Exception(f"Google API Error: {error_body}")
+        except Exception as e:
+            print(f"REST API General Error: {e}")
+            raise Exception(f"Google API Failed: {str(e)}")
         
         # Clean up: delete the file from Google servers
         genai.delete_file(video_file.name)
         
-        return response.text.strip()
+        return text_response.strip()
 
 ai_service = AIService()
