@@ -10,7 +10,7 @@ API_KEY = "REMOVED_API_KEY"
 class AIService:
     def __init__(self):
         genai.configure(api_key=API_KEY)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     async def translate_video(self, video_path: str) -> str:
         print(f"Uploading file: {video_path}")
@@ -32,7 +32,7 @@ class AIService:
             "If no sign language is detected, describe what is happening in the video briefly."
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
         
         payload = {
             "contents": [
