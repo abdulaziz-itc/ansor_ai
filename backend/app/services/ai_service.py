@@ -12,7 +12,7 @@ class AIService:
     def __init__(self):
         api_key = os.getenv("GOOGLE_API_KEY")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = genai.GenerativeModel('gemini-flash-latest')
 
     async def translate_video(self, video_path: str) -> str:
         """
@@ -44,14 +44,16 @@ class AIService:
         import urllib.request
         
         api_key = os.getenv("GOOGLE_API_KEY")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        # Let's try the -latest suffix just in case
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
         
+        # Google API requires camelCase for JSON!
         payload = {
             "contents": [
                 {
                     "parts": [
                         {"text": prompt},
-                        {"file_data": {"mime_type": video_file.mime_type, "file_uri": video_file.uri}}
+                        {"fileData": {"mimeType": video_file.mime_type, "fileUri": video_file.uri}}
                     ]
                 }
             ]
@@ -65,6 +67,18 @@ class AIService:
                 text_response = result['candidates'][0]['content']['parts'][0]['text']
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8')
+            
+            # Fetch available models to debug!
+            try:
+                models_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                models_req = urllib.request.Request(models_url)
+                with urllib.request.urlopen(models_req) as m_res:
+                    models_data = json.loads(m_res.read().decode('utf-8'))
+                    avail_models = [m['name'] for m in models_data.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+                    error_body += f" \n\nAVAILABLE MODELS ON THIS KEY: {', '.join(avail_models)}"
+            except Exception as ex:
+                error_body += f" (Could not fetch models: {str(ex)})"
+                
             print(f"REST API HTTP Error: {error_body}")
             raise Exception(f"Google API Error: {error_body}")
         except Exception as e:
