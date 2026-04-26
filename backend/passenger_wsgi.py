@@ -5,6 +5,16 @@ import traceback
 # 1. ENVIROMENT FIX (MUST BE AT THE TOP)
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
+# 1.5 EXPLICITLY LOAD .ENV (Bulletproof method for cPanel)
+env_file_path = "/home/joidauz/ansor.joida.uz/backend/.env"
+if os.path.exists(env_file_path):
+    with open(env_file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                os.environ[key.strip()] = val.strip()
+
 # 2. SETUP PATHS
 USERNAME = "joidauz"
 DOMAIN = "ansor.joida.uz"

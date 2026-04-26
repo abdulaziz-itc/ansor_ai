@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load .env from the project root (backend folder)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 env_path = os.path.join(BASE_DIR, '.env')
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 class AIService:
     def __init__(self):
