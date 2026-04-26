@@ -17,8 +17,9 @@ class AudioService:
         filename = f"{uuid.uuid4()}.mp3"
         filepath = os.path.join(self.output_dir, filename)
         
-        # 'uz' is the language code for Uzbek
-        tts = gTTS(text=text, lang='uz')
+        # 'tr' (Turkish) is used as a fallback since 'uz' is not supported by gTTS.
+        # Turkish and Uzbek share similar alphabet and phonetics.
+        tts = gTTS(text=text, lang='tr')
         
         # Save asynchronously
         await asyncio.to_thread(tts.save, filepath)
