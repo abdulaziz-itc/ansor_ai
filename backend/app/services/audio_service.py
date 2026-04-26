@@ -1,6 +1,7 @@
-import edge_tts
 import uuid
 import os
+import asyncio
+from gtts import gTTS
 
 class AudioService:
     def __init__(self, output_dir: str):
@@ -10,17 +11,17 @@ class AudioService:
 
     async def generate_audio(self, text: str) -> str:
         """
-        Generates an MP3 file from text using Edge-TTS.
+        Generates an MP3 file from text using gTTS as a fallback.
         Returns the filename.
         """
         filename = f"{uuid.uuid4()}.mp3"
         filepath = os.path.join(self.output_dir, filename)
         
-        # Using a high-quality Uzbek voice
-        voice = "uz-UZ-MadinaNeural" 
+        # 'uz' is the language code for Uzbek
+        tts = gTTS(text=text, lang='uz')
         
-        communicate = edge_tts.Communicate(text, voice)
-        await communicate.save(filepath)
+        # Save asynchronously
+        await asyncio.to_thread(tts.save, filepath)
         
         return filename
 
