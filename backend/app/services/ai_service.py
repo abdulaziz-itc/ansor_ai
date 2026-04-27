@@ -18,7 +18,7 @@ class AIService:
         if not api_key:
             print("WARNING: GOOGLE_API_KEY is not set in environment!")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = genai.GenerativeModel('gemini-flash-latest')
 
     async def translate_video(self, video_path: str) -> str:
         print(f"Uploading file: {video_path}")
