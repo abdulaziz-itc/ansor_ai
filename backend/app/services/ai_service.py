@@ -4,12 +4,20 @@ import json
 import urllib.request
 import os
 
-# KESHDAN QUTILISH UCHUN KALIT TO'G'RIDAN-TO'G'RI KODGA YOZILDI
-API_KEY = "REMOVED_API_KEY"
+import os
+from dotenv import load_dotenv
+
+# Load .env from the project root (backend folder)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+env_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path=env_path, override=True)
 
 class AIService:
     def __init__(self):
-        genai.configure(api_key=API_KEY)
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            print("WARNING: GOOGLE_API_KEY is not set in environment!")
+        genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     async def translate_video(self, video_path: str) -> str:
@@ -32,7 +40,8 @@ class AIService:
             "If no sign language is detected, describe what is happening in the video briefly in Russian language."
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
+        api_key = os.getenv("GOOGLE_API_KEY")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
         payload = {
             "contents": [
