@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
@@ -34,11 +35,19 @@ class ApiClient {
   ApiClient(this._dio);
 
   Future<Response> uploadVideo(String filePath) async {
-    final formData = FormData.fromMap({
-      'video': await MultipartFile.fromFile(filePath, filename: 'upload.mp4'),
-    });
+    final file = File(filePath);
+    final bytes = await file.readAsBytes();
 
-    return await _dio.post(ApiConstants.uploadVideo, data: formData);
+    return await _dio.post(
+      ApiConstants.uploadVideo, 
+      data: bytes,
+      options: Options(
+        headers: {
+          Headers.contentTypeHeader: 'application/octet-stream',
+          Headers.contentLengthHeader: bytes.length,
+        },
+      ),
+    );
   }
 
   Future<Response> getAudio(String id) async {

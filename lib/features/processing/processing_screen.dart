@@ -54,7 +54,15 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
       if (e is DioException && e.response?.data != null) {
         final data = e.response?.data;
         if (data is Map && data.containsKey('detail')) {
-          message = data['detail'];
+          final detail = data['detail'];
+          if (detail is String) {
+            message = detail;
+          } else if (detail is List && detail.isNotEmpty) {
+            final firstError = detail[0];
+            message = firstError is Map && firstError.containsKey('msg') 
+                ? firstError['msg'].toString() 
+                : detail.toString();
+          }
         }
       }
       

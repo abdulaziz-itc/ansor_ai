@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 import shutil
 import os
 import uuid
@@ -12,14 +12,24 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 @router.post("/upload-video")
-async def upload_video(video: UploadFile = File(...)):
+async def upload_video(request: Request):
     # Save video temporarily
     file_id = str(uuid.uuid4())
-    ext = video.filename.split(".")[-1]
-    video_path = os.path.join(UPLOAD_DIR, f"{file_id}.{ext}")
+    content_type = request.headers.get("content-type", "")
     
-    with open(video_path, "wb") as buffer:
-        shutil.copyfileobj(video.file, buffer)
+    video_path = os.path.join(UPLOAD_DIR, f"{file_id}.mp4")
+    
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        video = form.get("video")
+        if not video:
+            raise HTTPException(status_code=400, detail="Video file required")
+        with open(video_path, "wb") as buffer:
+            shutil.copyfileobj(video.file, buffer)
+    else:
+        with open(video_path, "wb") as buffer:
+            async for chunk in request.stream():
+                buffer.write(chunk)
 
     try:
         # 1. Translate video to text using AI
