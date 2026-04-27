@@ -41,30 +41,11 @@ class AIService:
         )
 
         api_key = os.getenv("GOOGLE_API_KEY")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-        
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {"fileData": {"mimeType": video_file.mime_type, "fileUri": video_file.uri}}
-                    ]
-                }
-            ]
-        }
-        
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={"Content-Type": "application/json"})
-        
         try:
-            with urllib.request.urlopen(req) as api_response:
-                result = json.loads(api_response.read().decode('utf-8'))
-                text_response = result['candidates'][0]['content']['parts'][0]['text']
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8')
-            raise Exception(f"Google API Error: {error_body}")
+            response = self.model.generate_content([prompt, video_file])
+            text_response = response.text
         except Exception as e:
-            raise Exception(f"Google API Failed: {str(e)}")
+            raise Exception(f"Google AI Error: {str(e)}")
         
         genai.delete_file(video_file.name)
         return text_response.strip()

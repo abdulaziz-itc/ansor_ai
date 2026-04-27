@@ -69,7 +69,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
       if (mounted) {
         setState(() {
           _hasError = true;
-          _statusText = 'Processing failed';
+          _statusText = 'Processing failed (v2)';
           _errorMessage = message;
         });
       }
