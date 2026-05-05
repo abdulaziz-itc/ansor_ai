@@ -1,69 +1,67 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from enum import Enum
 
 class MessageType(str, Enum):
     TEXT = "text"
     VIDEO = "video"
     AUDIO = "audio"
+    FILE = "file"
+    STICKER = "sticker"
+    CALL = "call"
+
+class ChatType(str, Enum):
+    PRIVATE = "private"
+    GROUP = "group"
 
 # User Schemas
 class UserBase(BaseModel):
-    username: str = Field(..., example="ali_valiyev", description="Foydalanuvchi nomi")
-    email: EmailStr = Field(..., example="ali@example.com", description="Elektron pochta manzili")
-
-class UserCreate(UserBase):
-    password: str = Field(..., example="strong_password123", description="Maxfiy parol")
+    username: str = Field(..., example="macbook13")
+    email: EmailStr = Field(..., example="user@example.com")
+    avatar_url: Optional[str] = None
 
 class UserRead(UserBase):
-    id: int = Field(..., example=1)
+    id: int
     created_at: datetime
+    class Config:
+        from_attributes = True
 
+# Media/File Schemas
+class MediaRead(BaseModel):
+    file_path: str
+    file_type: str
+    file_name: Optional[str] = None
+    file_size: Optional[int] = None
     class Config:
         from_attributes = True
 
 # Message Schemas
 class MessageBase(BaseModel):
-    content: Optional[str] = Field(None, example="Salom, qandaysiz?", description="Xabar matni")
-    type: MessageType = Field(MessageType.TEXT, example="text", description="Xabar turi (text, video, audio)")
-
-class MessageCreate(MessageBase):
-    chat_id: int = Field(..., example=1, description="Chat ID")
+    content: Optional[str] = None
+    type: MessageType = MessageType.TEXT
+    metadata_json: Optional[Dict[str, Any]] = None
 
 class MessageRead(MessageBase):
-    id: int = Field(..., example=101)
-    chat_id: int = Field(..., example=1)
-    sender_id: int = Field(..., example=1)
+    id: int
+    chat_id: int
+    sender_id: int
     created_at: datetime
-
+    media: Optional[MediaRead] = None
     class Config:
         from_attributes = True
 
 # Chat Schemas
-class ChatBase(BaseModel):
-    name: Optional[str] = Field(None, example="Umumiy guruh", description="Chat nomi")
-
-class ChatCreate(ChatBase):
-    pass
-
-class ChatRead(ChatBase):
-    id: int = Field(..., example=1)
+class ChatRead(BaseModel):
+    id: int
+    name: Optional[str] = None
+    type: ChatType
     created_at: datetime
-    
     class Config:
         from_attributes = True
 
-# Response Schemas for Swagger
-class VideoUploadResponse(BaseModel):
-    status: str = Field(..., example="processing", description="Jarayon holati")
-    message_id: int = Field(..., example=101, description="Yaratilgan xabar IDsi")
-
-class SuccessResponse(BaseModel):
-    status: str = Field(..., example="success")
-    message: str = Field(..., example="Amal muvaffaqiyatli bajarildi")
-
-# WebSocket Message Structure
-class WSMessage(BaseModel):
-    type: str = Field(..., example="ai_processing_complete", description="Xabar turi")
-    data: dict = Field(..., description="Xabar ma'lumotlari")
+# Call Signaling Schema
+class SignalData(BaseModel):
+    target_id: int = Field(..., description="Signal yuborilayotgan foydalanuvchi IDsi")
+    type: str = Field(..., example="offer", description="Signal turi (offer, answer, candidate)")
+    signal: Dict[str, Any] = Field(..., description="SDP yoki ICE candidate ma'lumotlari")
