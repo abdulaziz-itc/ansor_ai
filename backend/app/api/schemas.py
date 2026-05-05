@@ -18,8 +18,12 @@ class ChatType(str, Enum):
 # User Schemas
 class UserBase(BaseModel):
     username: str = Field(..., example="macbook13")
+    full_name: Optional[str] = Field(None, example="Abdurahmon")
     email: EmailStr = Field(..., example="user@example.com")
-    avatar_url: Optional[str] = None
+    avatar_url: Optional[str] = Field(None, example="https://ansor.joida.uz/static/avatars/default.png")
+
+class UserCreate(UserBase):
+    password: str = Field(..., example="password123")
 
 class UserRead(UserBase):
     id: int
@@ -59,6 +63,18 @@ class ChatRead(BaseModel):
     created_at: datetime
     class Config:
         from_attributes = True
+# Authentication Schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    user_id: Optional[int] = None
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 # Call Signaling Schema
 class SignalData(BaseModel):

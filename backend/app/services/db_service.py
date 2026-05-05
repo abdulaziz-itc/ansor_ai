@@ -8,6 +8,25 @@ from ..models import User, Chat, Message, Media, MessageType, ChatType
 logger = logging.getLogger("ansor_ai.db_service")
 
 class DBService:
+    async def get_user_by_username(self, db: AsyncSession, username: str) -> Optional[User]:
+        """Foydalanuvchini username orqali topish."""
+        result = await db.execute(select(User).where(User.username == username))
+        return result.scalars().first()
+
+    async def create_user(self, db: AsyncSession, user_in: schemas.UserCreate, hashed_password: str) -> User:
+        """Yangi foydalanuvchi yaratish."""
+        db_user = User(
+            username=user_in.username,
+            full_name=user_in.full_name,
+            email=user_in.email,
+            hashed_password=hashed_password,
+            avatar_url=user_in.avatar_url
+        )
+        db.add(db_user)
+        await db.commit()
+        await db.refresh(db_user)
+        return db_user
+
     async def get_chats(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> List[Chat]:
         result = await db.execute(
             select(Chat).order_by(desc(Chat.created_at)).offset(skip).limit(limit)

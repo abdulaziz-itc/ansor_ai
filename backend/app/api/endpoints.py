@@ -15,6 +15,8 @@ from ..services.audio_service import audio_service
 from ..services.websocket_manager import manager
 from ..services.db_service import db_service
 from . import schemas
+from .deps import get_current_user
+from ..models import User
 
 logger = logging.getLogger("ansor_ai.api")
 router = APIRouter()
@@ -34,17 +36,29 @@ for d in [UPLOAD_DIR, FILES_DIR, STICKERS_DIR]:
 async def create_chat(
     name: Optional[str] = None, 
     type: ChatType = ChatType.PRIVATE, 
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Shaxsiy yoki guruh chatini yaratish."""
     return await db_service.create_chat(db, name=name, chat_type=type)
 
 @router.get("/chats", response_model=List[schemas.ChatRead], tags=["Chats"])
-async def list_chats(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def list_chats(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     return await db_service.get_chats(db, skip=skip, limit=limit)
 
 @router.get("/chats/{chat_id}/messages", response_model=List[schemas.MessageRead], tags=["Chats"])
-async def get_chat_messages(chat_id: int, skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
+async def get_chat_messages(
+    chat_id: int, 
+    skip: int = 0, 
+    limit: int = 50, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     return await db_service.get_messages(db, chat_id=chat_id, skip=skip, limit=limit)
 
 # --- Media va Fayllar ---
@@ -53,8 +67,8 @@ async def get_chat_messages(chat_id: int, skip: int = 0, limit: int = 50, db: As
 async def upload_file(
     chat_id: int,
     file: UploadFile = File(...),
-    user_id: int = 1,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Telegram kabi har qanday faylni chatga yuborish."""
     file_id = str(uuid.uuid4())
@@ -67,7 +81,7 @@ async def upload_file(
     
     # Baza yozuvi
     db_msg = await db_service.create_message(
-        db, sender_id=user_id, chat_id=chat_id, content=file.filename, msg_type=MessageType.FILE
+        db, sender_id=current_user.id, chat_id=chat_id, content=file.filename, msg_type=MessageType.FILE
     )
     
     await db_service.add_media(
@@ -96,8 +110,8 @@ async def upload_video(
     chat_id: int,
     background_tasks: BackgroundTasks,
     request: Request,
-    user_id: int = 1,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Videoni qabul qilish va AI tahlilini navbatga qo'yish."""
     file_id = str(uuid.uuid4())
@@ -117,10 +131,10 @@ async def upload_video(
     
     from .endpoints import process_media_ai_task # Cyclic import oldini olish uchun
     db_msg = await db_service.create_message(
-        db, sender_id=user_id, chat_id=chat_id, content="[Video tahlili...]", msg_type=MessageType.VIDEO
+        db, sender_id=current_user.id, chat_id=chat_id, content="[Video tahlili...]", msg_type=MessageType.VIDEO
     )
     
-    background_tasks.add_task(process_media_ai_task, db_msg.id, video_path, user_id, chat_id)
+    background_tasks.add_task(process_media_ai_task, db_msg.id, video_path, current_user.id, chat_id)
     return {"status": "processing", "message_id": db_msg.id}
 
 # --- WebSocket & WebRTC Signaling ---

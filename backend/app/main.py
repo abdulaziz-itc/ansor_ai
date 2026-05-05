@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .api import endpoints
+from .api import endpoints, auth
 from .database import engine, Base
 from .services.file_service import file_service
 
@@ -73,6 +73,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 5. Routerlar
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(endpoints.router, prefix="/api/v1")
 
 # 6. Global xatoliklar handler'i
