@@ -1,14 +1,52 @@
-from fastapi import FastAPI
+import logging
+import os
+import time
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import uvicorn
 from .api import endpoints
-import os
+from .database import engine, Base
+from .services.file_service import file_service
 
-app = FastAPI(title="Sign2Voice API")
+# 1. Logging sozlamalari
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("app.log")
+    ]
+)
+logger = logging.getLogger("ansor_ai")
 
-# Enable CORS for Flutter communication
+app = FastAPI(
+    title="Ansor AI - Sign2Voice API",
+    description="""
+    ## Sign2Voice Professional API
+    
+    Bu API imo-ishora tilini matnga va ovozga aylantirish uchun xizmat qiladi.
+    
+    ### Xususiyatlar:
+    * **AI Video Processing**: Gemini orqali videoni tahlil qilish.
+    * **Text-to-Speech**: Matnni professional ovozga (Edge-TTS) aylantirish.
+    * **Real-time Updates**: WebSocket orqali jarayonni kuzatish.
+    * **Chat History**: Xabarlar va media tarixini saqlash.
+    """,
+    version="1.1.0",
+    contact={
+        "name": "Ansor AI Support",
+        "url": "https://ansor.joida.uz/support",
+        "email": "support@joida.uz",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# 2. CORS sozlamalari
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,26 +55,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static audio files
-if not os.path.exists("static/audio"):
-    os.makedirs("static/audio")
+# 3. Request timing middleware
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    logger.info(f"{request.method} {request.url.path} processed in {process_time:.4f}s")
+    return response
+
+# 4. Static fayllar
+for folder in ["static/audio", "uploads"]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Include API routes
-app.include_router(endpoints.router)
+# 5. Routerlar
+app.include_router(endpoints.router, prefix="/api/v1")
 
+# 6. Global xatoliklar handler'i
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Error: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Server Error: {str(exc)}"},
+        content={"detail": "Ichki server xatosi yuz berdi. Administrator bilan bog'laning."},
     )
 
-@app.get("/")
+@app.get("/", tags=["General"])
 async def root():
-    return {"message": "Sign2Voice API is running"}
+    """Server holatini tekshirish uchun bosh endpoint."""
+    return {
+        "status": "online",
+        "service": "Ansor AI API",
+        "version": "1.1.0",
+        "docs": "/docs"
+    }
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "0.0.0.0")
-    uvicorn.run(app, host=host, port=port)
+@app.on_event("startup")
+async def startup():
+    logger.info("Server ishga tushmoqda...")
+    # Eski fayllarni tozalash (24 soatdan oshgan)
+    file_service.cleanup_old_files()
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+@app.on_event("shutdown")
+async def shutdown():
+    logger.info("Server to'xtamoqda...")
+    await engine.dispose()

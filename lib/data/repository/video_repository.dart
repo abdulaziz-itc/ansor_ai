@@ -12,8 +12,8 @@ class VideoRepository {
 
   VideoRepository(this._apiClient);
 
-  Future<VideoUploadResponse> uploadVideo(String filePath) async {
-    final response = await _apiClient.uploadVideo(filePath);
+  Future<VideoUploadResponse> uploadVideo(int chatId, String filePath) async {
+    final response = await _apiClient.uploadVideo(chatId, filePath);
     return VideoUploadResponse.fromJson(response.data);
   }
 }

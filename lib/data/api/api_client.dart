@@ -34,12 +34,12 @@ class ApiClient {
 
   ApiClient(this._dio);
 
-  Future<Response> uploadVideo(String filePath) async {
+  Future<Response> uploadVideo(int chatId, String filePath) async {
     final file = File(filePath);
     final bytes = await file.readAsBytes();
 
     return await _dio.post(
-      ApiConstants.uploadVideo, 
+      ApiConstants.uploadVideo(chatId), 
       data: bytes,
       options: Options(
         headers: {
@@ -50,8 +50,12 @@ class ApiClient {
     );
   }
 
-  Future<Response> getAudio(String id) async {
-    return await _dio.get('${ApiConstants.getAudio}/$id');
+  Future<Response> getChats() async {
+    return await _dio.get(ApiConstants.getChats);
+  }
+
+  Future<Response> getMessages(int chatId) async {
+    return await _dio.get(ApiConstants.getMessages(chatId));
   }
 
   Future<Response> share(Map<String, dynamic> data) async {
