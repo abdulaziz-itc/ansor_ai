@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+import shutil
+import os
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 from ..database import get_db
@@ -50,3 +53,36 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 async def get_me(current_user: User = Depends(get_current_user)):
     """Hozirgi tizimga kirgan foydalanuvchi ma'lumotlarini olish."""
     return current_user
+
+@router.patch("/me", response_model=schemas.UserRead)
+async def update_profile(
+    user_update: schemas.UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Profil ma'lumotlarini (ism, email) yangilash."""
+    return await db_service.update_user(db, current_user.id, user_update)
+
+@router.post("/me/avatar", response_model=schemas.UserRead)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Profil rasmini yuklash."""
+    AVATAR_DIR = "static/avatars"
+    if not os.path.exists(AVATAR_DIR):
+        os.makedirs(AVATAR_DIR)
+        
+    file_id = str(uuid.uuid4())
+    ext = os.path.splitext(file.filename)[1]
+    filename = f"{file_id}{ext}"
+    filepath = os.path.join(AVATAR_DIR, filename)
+    
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Bazani yangilash
+    avatar_url = f"/static/avatars/{filename}"
+    user_update = schemas.UserUpdate(avatar_url=avatar_url)
+    return await db_service.update_user(db, current_user.id, user_update)

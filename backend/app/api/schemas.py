@@ -25,6 +25,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., example="password123")
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = Field(None, example="Abdurahmon Yangilangan")
+    avatar_url: Optional[str] = Field(None, example="https://ansor.joida.uz/static/avatars/new.png")
+    email: Optional[EmailStr] = Field(None, example="new_email@example.com")
+
 class UserRead(UserBase):
     id: int
     created_at: datetime

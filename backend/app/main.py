@@ -66,7 +66,7 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 # 4. Static fayllar
-for folder in ["static/audio", "uploads"]:
+for folder in ["static/audio", "static/avatars", "uploads", "uploads/files", "uploads/stickers"]:
     if not os.path.exists(folder):
         os.makedirs(folder)
 app.mount("/static", StaticFiles(directory="static"), name="static")

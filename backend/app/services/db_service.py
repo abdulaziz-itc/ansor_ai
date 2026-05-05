@@ -27,6 +27,22 @@ class DBService:
         await db.refresh(db_user)
         return db_user
 
+    async def update_user(self, db: AsyncSession, user_id: int, user_update: schemas.UserUpdate) -> User:
+        """Foydalanuvchi ma'lumotlarini yangilash."""
+        result = await db.execute(select(User).where(User.id == user_id))
+        db_user = result.scalars().first()
+        
+        if db_user:
+            update_data = user_update.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(db_user, key, value)
+            
+            await db.commit()
+            await db.refresh(db_user)
+            logger.info(f"Foydalanuvchi yangilandi: ID={user_id}")
+        
+        return db_user
+
     async def get_chats(self, db: AsyncSession, skip: int = 0, limit: int = 100) -> List[Chat]:
         result = await db.execute(
             select(Chat).order_by(desc(Chat.created_at)).offset(skip).limit(limit)
