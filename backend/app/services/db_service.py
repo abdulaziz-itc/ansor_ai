@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from ..models import User, Chat, Message, Media, MessageType, ChatType
+from ..api import schemas
 
 logger = logging.getLogger("ansor_ai.db_service")
 
