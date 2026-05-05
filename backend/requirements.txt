@@ -7,3 +7,7 @@ gTTS==2.5.1
 python-dotenv==1.0.1
 aiofiles==23.2.1
 a2wsgi==1.10.7
+sqlalchemy>=2.0.25
+asyncpg>=0.29.0
+alembic>=1.13.1
+pydantic[email]>=2.6.1
