@@ -5,7 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/api_response.dart';
 
 class ResultScreen extends StatefulWidget {
-  final VideoUploadResponse result;
+  final AIProcessingResult result;
   const ResultScreen({super.key, required this.result});
 
   @override

@@ -19,7 +19,7 @@ class HistoryScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: FutureBuilder<List<VideoUploadResponse>>(
+      body: FutureBuilder<List<AIProcessingResult>>(
         future: historyFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -66,7 +66,7 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryItem(BuildContext context, VideoUploadResponse item) {
+  Widget _buildHistoryItem(BuildContext context, AIProcessingResult item) {
     final dateStr = DateFormat('MMM d, HH:mm').format(item.createdAt);
 
     return Container(

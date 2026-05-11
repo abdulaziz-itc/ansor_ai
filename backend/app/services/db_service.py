@@ -14,6 +14,16 @@ class DBService:
         result = await db.execute(select(User).where(User.username == username))
         return result.scalars().first()
 
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
+        """Foydalanuvchini email orqali topish."""
+        result = await db.execute(select(User).where(User.email == email))
+        return result.scalars().first()
+
+    async def get_user_by_google_id(self, db: AsyncSession, google_id: str) -> Optional[User]:
+        """Foydalanuvchini Google ID orqali topish."""
+        result = await db.execute(select(User).where(User.google_id == google_id))
+        return result.scalars().first()
+
     async def create_user(self, db: AsyncSession, user_in: schemas.UserCreate, hashed_password: str) -> User:
         """Yangi foydalanuvchi yaratish."""
         db_user = User(
@@ -22,6 +32,24 @@ class DBService:
             email=user_in.email,
             hashed_password=hashed_password,
             avatar_url=user_in.avatar_url
+        )
+        db.add(db_user)
+        await db.commit()
+        await db.refresh(db_user)
+        return db_user
+
+    async def create_google_user(self, db: AsyncSession, email: str, full_name: str, google_id: str, avatar_url: Optional[str] = None) -> User:
+        """Google orqali kirgan yangi foydalanuvchi yaratish."""
+        # Username sifatida emailning bosh qismini olamiz
+        username = email.split("@")[0] + "_" + google_id[:4]
+        
+        db_user = User(
+            username=username,
+            full_name=full_name,
+            email=email,
+            hashed_password=None,
+            google_id=google_id,
+            avatar_url=avatar_url
         )
         db.add(db_user)
         await db.commit()

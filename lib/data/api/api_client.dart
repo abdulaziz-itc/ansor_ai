@@ -4,26 +4,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
 import 'package:logger/logger.dart';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 final dioProvider = Provider<Dio>((ref) {
+  const storage = FlutterSecureStorage();
+  
   final dio = Dio(BaseOptions(
     baseUrl: ApiConstants.baseUrl,
     connectTimeout: const Duration(seconds: 120),
     receiveTimeout: const Duration(seconds: 120),
   ));
 
-  dio.interceptors.add(LogInterceptor(
-    requestBody: true,
-    responseBody: true,
-    logPrint: (obj) => Logger().d(obj),
-  ));
-
+  // Token Injector Interceptor
   dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      final token = await storage.read(key: 'auth_token');
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+      return handler.next(options);
+    },
     onError: (DioException e, handler) {
       Logger().e('API Error: ${e.type} - ${e.message}\n'
           'URL: ${e.requestOptions.uri}\n'
           'Data: ${e.requestOptions.data}');
       return handler.next(e);
     },
+  ));
+
+  dio.interceptors.add(LogInterceptor(
+    requestBody: true,
+    responseBody: true,
+    logPrint: (obj) => Logger().d(obj),
   ));
 
   return dio;
@@ -47,6 +59,32 @@ class ApiClient {
           Headers.contentLengthHeader: bytes.length,
         },
       ),
+    );
+  }
+
+  Future<Response> register(Map<String, dynamic> data) async {
+    return await _dio.post('${ApiConstants.baseApiUrl}/auth/register', data: data);
+  }
+
+  Future<Response> login(String username, String password) async {
+    // Standard OAuth2 application/x-www-form-urlencoded request format for FastAPI
+    final data = {
+      'username': username,
+      'password': password,
+    };
+    return await _dio.post(
+      '${ApiConstants.baseApiUrl}/auth/login',
+      data: data,
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+      ),
+    );
+  }
+
+  Future<Response> loginWithGoogle(String idToken) async {
+    return await _dio.post(
+      '${ApiConstants.baseApiUrl}/auth/google',
+      data: {'id_token': idToken},
     );
   }
 

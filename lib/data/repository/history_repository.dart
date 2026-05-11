@@ -16,7 +16,7 @@ class HistoryRepository {
     return File('${directory.path}/$_fileName');
   }
 
-  Future<List<VideoUploadResponse>> getHistory() async {
+  Future<List<AIProcessingResult>> getHistory() async {
     try {
       final file = await _getHistoryFile();
       if (!await file.exists()) {
@@ -24,13 +24,13 @@ class HistoryRepository {
       }
       final contents = await file.readAsString();
       final List<dynamic> jsonList = json.decode(contents);
-      return jsonList.map((item) => VideoUploadResponse.fromJson(item)).toList();
+      return jsonList.map((item) => AIProcessingResult.fromJson(item)).toList();
     } catch (e) {
       return [];
     }
   }
 
-  Future<void> saveResult(VideoUploadResponse result) async {
+  Future<void> saveResult(AIProcessingResult result) async {
     final history = await getHistory();
     history.insert(0, result); // Add to beginning
     

@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../data/repository/video_repository.dart';
+import '../../data/api/websocket_service.dart';
 import '../result/result_screen.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/repository/history_repository.dart';
+import '../../data/models/api_response.dart';
 
 class ProcessingScreen extends ConsumerStatefulWidget {
   final String videoPath;
@@ -19,6 +22,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
   String _statusText = 'Uploading video...';
   bool _hasError = false;
   String _errorMessage = '';
+  StreamSubscription? _wsSubscription;
 
   @override
   void initState() {
@@ -35,23 +39,52 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
     try {
       final repository = ref.read(videoRepositoryProvider);
       final historyRepo = ref.read(historyRepositoryProvider);
+      final wsService = ref.read(webSocketServiceProvider);
       
-      setState(() => _statusText = 'Analyzing signs...');
-      final response = await repository.uploadVideo(widget.videoPath);
+      // 1. Setup dummy context (until authenticating UI is complete)
+      const dummyChatId = 1;
+      const dummyUserId = 1; // Needed for WebSocket identifier
+
+      // 2. Connect websocket listener
+      wsService.connect(dummyUserId);
+      
+      setState(() => _statusText = 'Sending to server...');
+      
+      // Setup the listener to resolve once we get matching results
+      final completer = Completer<AIProcessingResult>();
+      _wsSubscription = wsService.results.listen((result) {
+        if (!completer.isCompleted) {
+           completer.complete(result);
+        }
+      });
+
+      // 3. Start upload (Non-blocking/Quick Accept response)
+      await repository.uploadVideo(dummyChatId, widget.videoPath);
+      
+      setState(() => _statusText = 'AI is translating signs...');
+
+      // 4. Wait for web socket to fire completing the processing
+      // Timeout protection included for failsafe (e.g. 2 minutes)
+      final finalResult = await completer.future.timeout(
+        const Duration(minutes: 2),
+        onTimeout: () => throw TimeoutException('AI processing took too long. Please check back later.'),
+      );
       
       // Save to history
-      await historyRepo.saveResult(response);
+      await historyRepo.saveResult(finalResult);
       
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => ResultScreen(result: response),
+            builder: (context) => ResultScreen(result: finalResult),
           ),
         );
       }
     } catch (e) {
       String message = e.toString();
-      if (e is DioException && e.response?.data != null) {
+      if (e is TimeoutException) {
+        message = "System timed out waiting for AI. It may still process in backend.";
+      } else if (e is DioException && e.response?.data != null) {
         final data = e.response?.data;
         if (data is Map && data.containsKey('detail')) {
           final detail = data['detail'];
@@ -69,7 +102,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
       if (mounted) {
         setState(() {
           _hasError = true;
-          _statusText = 'Processing failed (v2)';
+          _statusText = 'Processing failed';
           _errorMessage = message;
         });
       }
@@ -79,6 +112,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> with Ticker
   @override
   void dispose() {
     _pulseController.dispose();
+    _wsSubscription?.cancel();
     super.dispose();
   }
 

@@ -29,12 +29,14 @@ class AIProcessingResult {
   final int chatId;
   final String text;
   final String audioUrl;
+  final DateTime createdAt;
 
   AIProcessingResult({
     required this.messageId,
     required this.chatId,
     required this.text,
     required this.audioUrl,
+    required this.createdAt,
   });
 
   factory AIProcessingResult.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,9 @@ class AIProcessingResult {
       chatId: json['chat_id'] ?? 0,
       text: json['text'] ?? '',
       audioUrl: url,
+      createdAt: json['created_at'] != null 
+        ? DateTime.parse(json['created_at']) 
+        : DateTime.now(),
     );
   }
 
@@ -57,6 +62,7 @@ class AIProcessingResult {
       'chat_id': chatId,
       'text': text,
       'audio_url': audioUrl,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 }

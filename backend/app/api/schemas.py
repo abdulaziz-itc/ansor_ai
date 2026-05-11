@@ -81,6 +81,9 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
 # Call Signaling Schema
 class SignalData(BaseModel):
     target_id: int = Field(..., description="Signal yuborilayotgan foydalanuvchi IDsi")
