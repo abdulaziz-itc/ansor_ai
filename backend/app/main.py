@@ -80,9 +80,12 @@ app.include_router(endpoints.router, prefix="/api/v1")
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global Error: {str(exc)}", exc_info=True)
+    # Faqat test davomida xatoni to'liq chiqarish (Debug rejimi)
+    import traceback
+    error_detail = f"DEBUG ERROR: {str(exc)}\nTrace: {traceback.format_exc()}"
     return JSONResponse(
         status_code=500,
-        content={"detail": "Ichki server xatosi yuz berdi. Administrator bilan bog'laning."},
+        content={"detail": error_detail},
     )
 
 from sqlalchemy import text
