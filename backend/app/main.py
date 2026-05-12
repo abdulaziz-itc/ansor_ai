@@ -85,6 +85,28 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Ichki server xatosi yuz berdi. Administrator bilan bog'laning."},
     )
 
+from sqlalchemy import text
+from .database import get_db
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@app.get("/api/v1/fix-db-schema", tags=["System"])
+async def emergency_db_fix(db: AsyncSession = Depends(get_db)):
+    """Emergency schema repair tool."""
+    try:
+        # 1. Add google_id
+        await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"))
+        # 2. Add Index
+        await db.execute(text("CREATE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id);"))
+        # 3. Make password nullable
+        await db.execute(text("ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;"))
+        
+        await db.commit()
+        return {"status": "success", "message": "Database schema updated successfully via active session!"}
+    except Exception as e:
+        await db.rollback()
+        return {"status": "error", "detail": str(e)}
+
 @app.get("/", tags=["General"])
 async def root():
     """Server holatini tekshirish uchun bosh endpoint."""
