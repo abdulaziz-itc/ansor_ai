@@ -2,6 +2,10 @@ import os
 import sys
 import traceback
 import logging
+import warnings
+
+# Silence all initialization stdout/stderr warnings preventing Passenger bootstrap failures
+warnings.simplefilter("ignore")
 
 # 1. ENVIROMENT FIX
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
