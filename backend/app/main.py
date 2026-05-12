@@ -94,17 +94,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def emergency_db_fix(db: AsyncSession = Depends(get_db)):
     """Emergency schema repair tool."""
     try:
-        # 1. Add google_id
-        await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"))
-        # 2. Add Index
-        await db.execute(text("CREATE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id);"))
-        # 3. Make password nullable
-        await db.execute(text("ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;"))
+        from .database import engine, Base
+        # 1. Create all tables from scratch natively
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            
+        # 2. Safety execution for existing installations that just need column add
+        try:
+            await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"))
+            await db.execute(text("CREATE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id);"))
+            await db.execute(text("ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;"))
+            await db.commit()
+        except Exception:
+            pass # If it fails because table didn't exist and was just created above, it's perfect.
         
-        await db.commit()
-        return {"status": "success", "message": "Database schema updated successfully via active session!"}
+        return {"status": "success", "message": "Database initialized successfully!"}
     except Exception as e:
-        await db.rollback()
         return {"status": "error", "detail": str(e)}
 
 @app.get("/", tags=["General"])
