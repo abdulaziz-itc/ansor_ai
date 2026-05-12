@@ -9,13 +9,15 @@ from .api import endpoints, auth
 from .database import engine, Base
 from .services.file_service import file_service
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # 1. Logging sozlamalari
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("app.log")
+        logging.FileHandler(os.path.join(BASE_DIR, "app.log"))
     ]
 )
 logger = logging.getLogger("ansor_ai")
@@ -67,10 +69,11 @@ async def add_process_time_header(request: Request, call_next):
 
 # 4. Static fayllar
 for folder in ["static/audio", "static/avatars", "uploads", "uploads/files", "uploads/stickers"]:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    full_path = os.path.join(BASE_DIR, folder)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path, exist_ok=True)
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+app.mount("/uploads", StaticFiles(directory=os.path.join(BASE_DIR, "uploads")), name="uploads")
 
 # 5. Routerlar
 app.include_router(auth.router, prefix="/api/v1")

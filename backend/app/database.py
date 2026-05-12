@@ -11,8 +11,9 @@ logger = logging.getLogger("ansor_ai.database")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-# AGAR DATABASE_URL berilmagan bo'lsa, avtomatik ravishda o'zida xotira yaratadigan SQLite ga ulanadi (Hech qanday konfiguratsiya shart emas!)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ansor_ai.db")
+# AGAR DATABASE_URL berilmagan bo'lsa, mutlaq (Absolute) manzil bo'yicha SQLite ga ulanadi
+DB_PATH = os.path.join(BASE_DIR, "ansor_ai.db")
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}")
 
 # 1. Engine sozlamalari
 is_sqlite = DATABASE_URL.startswith("sqlite")
