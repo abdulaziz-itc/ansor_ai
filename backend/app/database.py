@@ -11,17 +11,29 @@ logger = logging.getLogger("ansor_ai.database")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/ansor_ai")
+# AGAR DATABASE_URL berilmagan bo'lsa, avtomatik ravishda o'zida xotira yaratadigan SQLite ga ulanadi (Hech qanday konfiguratsiya shart emas!)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ansor_ai.db")
 
-# 1. Engine sozlamalari (Production-ready)
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,  # SQL so'rovlarini terminalga chiqarmaslik (productionda)
-    pool_size=10,         # Doimiy ochiq ulanishlar soni
-    max_overflow=20,      # Zarurat tug'ilganda qo'shimcha ulanishlar soni
-    pool_timeout=30,      # Ulanish kutish vaqti
-    pool_recycle=1800,    # 30 daqiqadan keyin ulanishni yangilash
-)
+# 1. Engine sozlamalari
+is_sqlite = DATABASE_URL.startswith("sqlite")
+
+if is_sqlite:
+    # SQLite specific settings
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={"check_same_thread": False}  # Important for SQLite
+    )
+else:
+    # PostgreSQL specific settings (Production)
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=30,
+        pool_recycle=1800,
+    )
 
 # 2. Session yaratuvchi
 SessionLocal = async_sessionmaker(
