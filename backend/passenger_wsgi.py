@@ -4,13 +4,10 @@ import json
 import traceback
 import warnings
 
-# Silence all initialization stdout/stderr warnings preventing Passenger bootstrap failures
 warnings.simplefilter("ignore")
 
-# 1. ENVIRONMENT FIX
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
-# 2. SETUP PATHS
 USERNAME = "joidauz"
 DOMAIN = "ansor.joida.uz"
 BASE_DIR = f"/home/{USERNAME}/{DOMAIN}/backend"
@@ -19,86 +16,123 @@ PYTHON_VERSION = "3.11"
 VENV_PATH_LIB = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib/python{PYTHON_VERSION}/site-packages"
 VENV_PATH_LIB64 = f"/home/{USERNAME}/virtualenv/{DOMAIN}/backend/{PYTHON_VERSION}/lib64/python{PYTHON_VERSION}/site-packages"
 
-# Add paths to sys.path
 for path in [VENV_PATH_LIB, VENV_PATH_LIB64, BASE_DIR]:
     if os.path.exists(path) and path not in sys.path:
         sys.path.insert(0, path)
 
-# 3. MODULE-LEVEL DEBUG: confirm this file is being loaded by Passenger
 try:
     with open(os.path.join(BASE_DIR, 'module_loaded.txt'), 'w') as _f:
-        _f.write(f"passenger_wsgi.py loaded. Python: {sys.version}\nPaths: {sys.path[:5]}\n")
+        _f.write(f"Module loaded. Python: {sys.version}\n")
 except Exception:
     pass
 
+# HTTP status phrase map (minimal)
+HTTP_PHRASES = {
+    200: "OK", 201: "Created", 204: "No Content",
+    400: "Bad Request", 401: "Unauthorized", 403: "Forbidden",
+    404: "Not Found", 422: "Unprocessable Entity",
+    500: "Internal Server Error",
+}
 
-def _write_debug(filename, content):
-    """Write debug info to a file safely."""
+
+def _run_asgi(app, environ, start_response):
+    """Custom ASGI→WSGI bridge using anyio. Replaces a2wsgi."""
+    import anyio
+
+    response_status = [None]
+    response_headers = [None]
+    response_body = []
+    response_started = [False]
+
+    # Read request body
     try:
-        with open(os.path.join(BASE_DIR, filename), 'w') as f:
-            f.write(content)
+        content_length = int(environ.get('CONTENT_LENGTH') or 0)
+        body = environ['wsgi.input'].read(content_length) if content_length > 0 else b''
     except Exception:
-        pass
+        body = b''
+
+    # Build ASGI scope
+    path = environ.get('PATH_INFO', '/')
+    query = environ.get('QUERY_STRING', '').encode('latin1')
+    method = environ.get('REQUEST_METHOD', 'GET')
+    server_name = environ.get('SERVER_NAME', 'localhost')
+    server_port = int(environ.get('SERVER_PORT', 80))
+
+    # Build headers
+    headers = []
+    for key, val in environ.items():
+        if key.startswith('HTTP_'):
+            name = key[5:].lower().replace('_', '-').encode('latin1')
+            headers.append((name, val.encode('latin1')))
+        elif key == 'CONTENT_TYPE' and val:
+            headers.append((b'content-type', val.encode('latin1')))
+        elif key == 'CONTENT_LENGTH' and val:
+            headers.append((b'content-length', val.encode('latin1')))
+
+    scope = {
+        'type': 'http',
+        'asgi': {'version': '3.0'},
+        'http_version': '1.1',
+        'method': method,
+        'headers': headers,
+        'path': path,
+        'query_string': query,
+        'root_path': '',
+        'scheme': environ.get('wsgi.url_scheme', 'https'),
+        'server': (server_name, server_port),
+    }
+
+    async def receive():
+        return {'type': 'http.request', 'body': body, 'more_body': False}
+
+    async def send(message):
+        if message['type'] == 'http.response.start' and not response_started[0]:
+            response_started[0] = True
+            status_code = message['status']
+            phrase = HTTP_PHRASES.get(status_code, 'Unknown')
+            response_status[0] = f"{status_code} {phrase}"
+            response_headers[0] = [
+                (k.decode('latin1'), v.decode('latin1'))
+                for k, v in message.get('headers', [])
+            ]
+        elif message['type'] == 'http.response.body' and response_started[0]:
+            chunk = message.get('body', b'')
+            if chunk:
+                response_body.append(chunk)
+
+    async def run_app():
+        try:
+            await app(scope, receive, send)
+        except Exception:
+            pass  # Don't let cleanup errors propagate
+
+    anyio.run(run_app)
+
+    if not response_started[0]:
+        start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
+        return [b'{"detail": "ASGI app did not produce a response"}']
+
+    start_response(response_status[0], response_headers[0])
+    return response_body
 
 
-# 4. MAIN APPLICATION
 def application(environ, start_response):
-    # ENTRY DEBUG: confirm application() is being called
-    _write_debug('request_debug.txt',
-                 f"application() called\nPATH: {environ.get('PATH_INFO', '?')}\n"
-                 f"METHOD: {environ.get('REQUEST_METHOD', '?')}\n")
-
-    # Wrap start_response to detect if it's being called and prevent double-call
-    sr_log = []
-    def wrapped_start_response(status, headers, exc_info=None):
-        sr_log.append(status)
-        _write_debug('start_response_debug.txt', f"start_response called with: {status} (call #{len(sr_log)})")
-        if len(sr_log) == 1:
-            # Only call the REAL start_response on the FIRST call
-            if exc_info:
-                return start_response(status, headers, exc_info)
-            return start_response(status, headers)
-        # Ignore subsequent calls (caused by async cleanup errors in a2wsgi)
-        _write_debug('double_call.txt', f"IGNORED 2nd start_response call: {status}")
-        return lambda data: None  # dummy write callable
-
     try:
-        from a2wsgi import ASGIMiddleware
         from app.main import app
-
-        _write_debug('import_ok.txt', "Imports succeeded")
-
-        real_app = ASGIMiddleware(app)
-        result = real_app(environ, wrapped_start_response)
-        body = list(result)
-
-        if not sr_log:
-            # start_response was NEVER called - this causes "Server got itself in trouble"
-            _write_debug('no_start_response.txt',
-                        f"ERROR: start_response never called!\nbody chunks: {len(body)}\nbody: {body[:2]}")
-            start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
-            return [json.dumps({"detail": "ASGI app did not produce a response (startup failed?)"}).encode()]
-
-        _write_debug('response_ok.txt', f"Response generated OK. status={sr_log[0]}, chunks={len(body)}")
-        return body
-
+        return _run_asgi(app, environ, start_response)
     except Exception:
-        # Capture exc_info IMMEDIATELY before any nested try/except clears it
         exc_info = sys.exc_info()
         error_info = traceback.format_exc()
-
-        # Write error to file for diagnosis
-        _write_debug('error_debug.txt', error_info)
-
-        # Use proper WSGI exc_info protocol - safe even if start_response already called
         try:
-            start_response(
-                '500 Internal Server Error',
-                [('Content-Type', 'application/json; charset=utf-8')],
-                exc_info
-            )
-            return [json.dumps({"detail": error_info}).encode('utf-8')]
+            with open(os.path.join(BASE_DIR, 'error_debug.txt'), 'w') as f:
+                f.write(error_info)
         except Exception:
-            _write_debug('critical_error.txt', traceback.format_exc())
-            # Return minimal response without changing headers
-            return [json.dumps({"detail": "Critical server error"}).encode('utf-8')]
+            pass
+        try:
+            start_response('500 Internal Server Error',
+                           [('Content-Type', 'application/json')],
+                           exc_info)
+        except Exception:
+            start_response('500 Internal Server Error',
+                           [('Content-Type', 'application/json')])
+        return [json.dumps({"detail": error_info}).encode()]
