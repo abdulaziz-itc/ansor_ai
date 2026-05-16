@@ -48,8 +48,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } on DioException catch (e) {
       String errorMessage = "Failed to login";
-      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
-        errorMessage = e.response?.data['detail'];
+      if (e.response?.data != null) {
+        if (e.response?.data is Map && e.response?.data['detail'] != null) {
+          errorMessage = e.response?.data['detail'];
+        } else if (e.response?.statusCode == 500) {
+          errorMessage = "Serverda ichki xatolik yuz berdi (500).";
+        }
       }
       state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
@@ -68,8 +72,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } on DioException catch (e) {
       String errorMessage = "Failed to create account";
-      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
-        errorMessage = e.response?.data['detail'];
+      if (e.response?.data != null) {
+        if (e.response?.data is Map && e.response?.data['detail'] != null) {
+          errorMessage = e.response?.data['detail'];
+        } else if (e.response?.statusCode == 500) {
+          errorMessage = "Serverda ichki xatolik yuz berdi (500).";
+        }
       }
       state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
@@ -88,8 +96,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } on DioException catch (e) {
       String errorMessage = "Sign-in failed";
-      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
-        errorMessage = e.response?.data['detail'];
+      if (e.response?.data != null) {
+        if (e.response?.data is Map && e.response?.data['detail'] != null) {
+          errorMessage = e.response?.data['detail'];
+        } else if (e.response?.statusCode == 500) {
+          errorMessage = "Serverda ichki xatolik yuz berdi (500).";
+        }
       }
       state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
