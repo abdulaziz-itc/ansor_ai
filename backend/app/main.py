@@ -12,13 +12,17 @@ from .services.file_service import file_service
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 1. Logging sozlamalari
+log_handlers = [logging.StreamHandler()]
+try:
+    log_file = os.path.join(BASE_DIR, "app.log")
+    log_handlers.append(logging.FileHandler(log_file))
+except (PermissionError, IOError):
+    pass  # Production serverda fayl yozishga ruxsat bo'lmasligi mumkin
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(os.path.join(BASE_DIR, "app.log"))
-    ]
+    handlers=log_handlers
 )
 logger = logging.getLogger("ansor_ai")
 
@@ -64,7 +68,10 @@ async def add_process_time_header(request: Request, call_next):
     response = await call_next(request)
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
-    logger.info(f"{request.method} {request.url.path} processed in {process_time:.4f}s")
+    try:
+        logger.info(f"{request.method} {request.url.path} processed in {process_time:.4f}s")
+    except:
+        pass
     return response
 
 # 4. Static fayllar
