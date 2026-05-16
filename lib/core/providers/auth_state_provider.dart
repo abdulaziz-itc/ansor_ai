@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../data/repository/auth_repository.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading }
@@ -45,6 +46,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         state = AuthState.unauthenticated(error: "Failed to retrieve token");
       }
+    } on DioException catch (e) {
+      String errorMessage = "Failed to login";
+      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
+        errorMessage = e.response?.data['detail'];
+      }
+      state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
       state = AuthState.unauthenticated(error: e.toString());
     }
@@ -59,6 +66,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         state = AuthState.unauthenticated(error: "Failed to create account");
       }
+    } on DioException catch (e) {
+      String errorMessage = "Failed to create account";
+      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
+        errorMessage = e.response?.data['detail'];
+      }
+      state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
       state = AuthState.unauthenticated(error: e.toString());
     }
@@ -73,6 +86,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         state = AuthState.unauthenticated(error: "Sign-in was canceled.");
       }
+    } on DioException catch (e) {
+      String errorMessage = "Sign-in failed";
+      if (e.response?.data != null && e.response?.data is Map && e.response?.data['detail'] != null) {
+        errorMessage = e.response?.data['detail'];
+      }
+      state = AuthState.unauthenticated(error: errorMessage);
     } catch (e) {
       state = AuthState.unauthenticated(error: e.toString());
     }

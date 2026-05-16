@@ -24,6 +24,14 @@ async def register(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_d
             detail="Ushbu foydalanuvchi nomi allaqachon mavjud"
         )
     
+    # Email mavjudligini tekshirish
+    db_email = await db_service.get_user_by_email(db, user_in.email)
+    if db_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Ushbu elektron pochta manzili allaqachon ro'yxatdan o'tgan"
+        )
+    
     # Parolni xesh qilish
     hashed_password = auth_service.get_password_hash(user_in.password)
     
