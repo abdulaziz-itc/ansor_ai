@@ -45,37 +45,30 @@ def application(environ, start_response):
         return list(result)
         
     except Exception:
-        # Log the error to a file
+        # Log the error to a file using raw I/O (logging may be misconfigured)
         error_info = traceback.format_exc()
-        logging.error(f"Backend Startup Error:\n{error_info}")
+        try:
+            debug_file = os.path.join(BASE_DIR, 'error_debug.txt')
+            with open(debug_file, 'w') as f:
+                f.write(error_info)
+        except Exception:
+            pass
         
-        # Diagnostic Mode for Browser
-        status = '200 OK'
-        headers = [('Content-Type', 'text/html; charset=utf-8')]
-        start_response(status, headers)
-        
-        html = f"""
-        <html>
-        <head>
-            <title>Ansor AI - Startup Error</title>
-            <style>
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #0f172a; color: #f1f5f9; }}
-                .container {{ max-width: 900px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-top: 5px solid #ef4444; }}
-                h1 {{ color: #ef4444; margin-top: 0; }}
-                pre {{ background: #020617; padding: 20px; border-radius: 8px; color: #fca5a5; overflow-x: auto; border: 1px solid #334155; font-size: 14px; line-height: 1.5; }}
-                .info {{ color: #94a3b8; font-size: 14px; margin-bottom: 20px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Backend Startup Error</h1>
-                <p class="info">Python: {sys.version} | Base: {BASE_DIR}</p>
-                <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;"/>
-                <p>Serverni ishga tushirishda xatolik yuz berdi. Batafsil ma'lumot:</p>
-                <pre>{error_info}</pre>
-                <p style="font-size: 12px; color: #64748b;">Xatolik <code>startup_error.log</code> fayliga ham yozildi.</p>
-            </div>
-        </body>
-        </html>
-        """
-        return [html.encode('utf-8')]
+        # Use WSGI exc_info protocol - works even if start_response was already called
+        import sys
+        import json
+        try:
+            start_response(
+                '500 Internal Server Error',
+                [('Content-Type', 'application/json; charset=utf-8')],
+                sys.exc_info()
+            )
+            return [json.dumps({"detail": error_info}).encode('utf-8')]
+        except Exception:
+            # If we can't even send an error response, log and re-raise
+            try:
+                with open(os.path.join(BASE_DIR, 'critical_error.txt'), 'w') as f:
+                    f.write(traceback.format_exc())
+            except Exception:
+                pass
+            raise
