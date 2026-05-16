@@ -2,6 +2,7 @@ import os
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 
 # Logger sozlash
@@ -16,24 +17,22 @@ DB_PATH = os.path.join(BASE_DIR, "ansor_ai.db")
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}")
 
 # 1. Engine sozlamalari
+# NullPool ishlatiladi: WSGI (Passenger) muhitida har so'rov uchun yangi
+# ulanish yaratiladi. Bu a2wsgi event loop muammosini hal qiladi.
 is_sqlite = DATABASE_URL.startswith("sqlite")
 
 if is_sqlite:
-    # SQLite specific settings
     engine = create_async_engine(
         DATABASE_URL,
         echo=False,
-        connect_args={"check_same_thread": False}  # Important for SQLite
+        poolclass=NullPool,
+        connect_args={"check_same_thread": False}
     )
 else:
-    # PostgreSQL specific settings (Production)
     engine = create_async_engine(
         DATABASE_URL,
         echo=False,
-        pool_size=10,
-        max_overflow=20,
-        pool_timeout=30,
-        pool_recycle=1800,
+        poolclass=NullPool,
     )
 
 # 2. Session yaratuvchi
