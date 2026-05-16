@@ -61,20 +61,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Request timing middleware
-@app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    try:
-        logger.info(f"{request.method} {request.url.path} processed in {process_time:.4f}s")
-    except:
-        pass
-    return response
 
-# 4. Static fayllar
+# 3. Static fayllar
 for folder in ["static/audio", "static/avatars", "uploads", "uploads/files", "uploads/stickers"]:
     full_path = os.path.join(BASE_DIR, folder)
     if not os.path.exists(full_path):
