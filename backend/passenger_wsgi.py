@@ -39,7 +39,10 @@ def application(environ, start_response):
         
         # Wrap FastAPI ASGI app to WSGI
         real_app = ASGIMiddleware(app)
-        return real_app(environ, start_response)
+        # CRITICAL: consume the iterator INSIDE try/except
+        # so any async exceptions are caught here, not by Passenger
+        result = real_app(environ, start_response)
+        return list(result)
         
     except Exception:
         # Log the error to a file
