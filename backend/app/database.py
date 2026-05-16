@@ -47,14 +47,19 @@ class Base(DeclarativeBase):
 
 async def get_db():
     """Baza bilan seans ochish va yopish uchun generator."""
-    async with SessionLocal() as session:
+    session = SessionLocal()
+    try:
+        yield session
+    except Exception as e:
         try:
-            yield session
-        except Exception as e:
-            logger.error(f"Ma'lumotlar bazasi seansi xatosi: {str(e)}")
             await session.rollback()
-            raise
-        finally:
+        except Exception:
+            pass
+        raise
+    finally:
+        try:
             await session.close()
+        except Exception:
+            pass  # Cleanup xatosi response ga ta'sir qilmasligi uchun yutib yuboriladi
 
 logger.info("Ma'lumotlar bazasi dvigateli (Engine) muvaffaqiyatli sozlandi.")
