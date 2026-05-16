@@ -79,10 +79,22 @@ app.mount("/uploads", StaticFiles(directory=os.path.join(BASE_DIR, "uploads")), 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(endpoints.router, prefix="/api/v1")
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 # 6. Global xatoliklar handler'i
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global Error: {str(exc)}", exc_info=True)
+    if isinstance(exc, StarletteHTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    if isinstance(exc, RequestValidationError):
+        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+        
+    try:
+        logger.error(f"Global Error: {str(exc)}", exc_info=True)
+    except:
+        pass
+    
     # Faqat test davomida xatoni to'liq chiqarish (Debug rejimi)
     import traceback
     error_detail = f"DEBUG ERROR: {str(exc)}\nTrace: {traceback.format_exc()}"
