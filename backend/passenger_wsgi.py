@@ -36,8 +36,8 @@ HTTP_PHRASES = {
 
 
 def _run_asgi(app, environ, start_response):
-    """Custom ASGI→WSGI bridge using anyio. Replaces a2wsgi."""
-    import anyio
+    """Custom ASGI→WSGI bridge using asyncio. Handles response lifecycle cleanly."""
+    import asyncio
 
     response_status = [None]
     response_headers = [None]
@@ -104,9 +104,18 @@ def _run_asgi(app, environ, start_response):
         try:
             await app(scope, receive, send)
         except Exception:
-            pass  # Don't let cleanup errors propagate
+            pass  # Swallow cleanup errors (e.g. session.close() failures)
 
-    anyio.run(run_app)
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(run_app())
+    finally:
+        try:
+            loop.close()
+        except Exception:
+            pass
 
     if not response_started[0]:
         start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
