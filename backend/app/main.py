@@ -108,6 +108,7 @@ async def emergency_db_fix(db: AsyncSession = Depends(get_db)):
         # 2. Safety execution for existing installations that just need column add
         try:
             await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"))
+            await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255);"))
             await db.execute(text("CREATE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id);"))
             await db.execute(text("ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;"))
             await db.commit()

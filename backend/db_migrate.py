@@ -22,6 +22,7 @@ async def run_migration():
     alter_queries = [
         # 1. Add google_id column safely (if not exists)
         text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR;"),
+        text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR;"),
         
         # 2. Add index for performance if possible
         text("CREATE INDEX IF NOT EXISTS ix_users_google_id ON users (google_id);"),
