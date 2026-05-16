@@ -16,46 +16,58 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
 async def register(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
     """Yangi foydalanuvchi ro'yxatdan o'tishi."""
-    # Username mavjudligini tekshirish
-    db_user = await db_service.get_user_by_username(db, user_in.username)
-    if db_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Ushbu foydalanuvchi nomi allaqachon mavjud"
-        )
-    
-    # Email mavjudligini tekshirish
-    db_email = await db_service.get_user_by_email(db, user_in.email)
-    if db_email:
-        raise HTTPException(
-            status_code=400,
-            detail="Ushbu elektron pochta manzili allaqachon ro'yxatdan o'tgan"
-        )
-    
-    # Parolni xesh qilish
-    hashed_password = auth_service.get_password_hash(user_in.password)
-    
-    # Foydalanuvchini yaratish
-    return await db_service.create_user(db, user_in, hashed_password)
+    try:
+        # Username mavjudligini tekshirish
+        db_user = await db_service.get_user_by_username(db, user_in.username)
+        if db_user:
+            raise HTTPException(
+                status_code=400,
+                detail="Ushbu foydalanuvchi nomi allaqachon mavjud"
+            )
+        
+        # Email mavjudligini tekshirish
+        db_email = await db_service.get_user_by_email(db, user_in.email)
+        if db_email:
+            raise HTTPException(
+                status_code=400,
+                detail="Ushbu elektron pochta manzili allaqachon ro'yxatdan o'tgan"
+            )
+        
+        # Parolni xesh qilish
+        hashed_password = auth_service.get_password_hash(user_in.password)
+        
+        # Foydalanuvchini yaratish
+        return await db_service.create_user(db, user_in, hashed_password)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Register xatosi: {str(e)} | {traceback.format_exc()}")
 
 @router.post("/login", response_model=schemas.Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     """Foydalanuvchi tizimga kirishi (Token olish)."""
-    # Foydalanuvchini qidirish
-    user = await db_service.get_user_by_username(db, form_data.username)
-    if not user or not auth_service.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Noto'g'ri foydalanuvchi nomi yoki parol",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        # Foydalanuvchini qidirish
+        user = await db_service.get_user_by_username(db, form_data.username)
+        if not user or not auth_service.verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Noto'g'ri foydalanuvchi nomi yoki parol",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Access Token yaratish
+        access_token = auth_service.create_access_token(
+            data={"sub": user.username, "user_id": user.id}
         )
-    
-    # Access Token yaratish
-    access_token = auth_service.create_access_token(
-        data={"sub": user.username, "user_id": user.id}
-    )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Login xatosi: {str(e)} | {traceback.format_exc()}")
 
 @router.post("/google", response_model=schemas.Token)
 async def google_login(request_data: schemas.GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
