@@ -48,14 +48,19 @@ def application(environ, start_response):
                  f"application() called\nPATH: {environ.get('PATH_INFO', '?')}\n"
                  f"METHOD: {environ.get('REQUEST_METHOD', '?')}\n")
 
-    # Wrap start_response to detect if it's being called
+    # Wrap start_response to detect if it's being called and prevent double-call
     sr_log = []
     def wrapped_start_response(status, headers, exc_info=None):
         sr_log.append(status)
-        _write_debug('start_response_debug.txt', f"start_response called with: {status}")
-        if exc_info:
-            return start_response(status, headers, exc_info)
-        return start_response(status, headers)
+        _write_debug('start_response_debug.txt', f"start_response called with: {status} (call #{len(sr_log)})")
+        if len(sr_log) == 1:
+            # Only call the REAL start_response on the FIRST call
+            if exc_info:
+                return start_response(status, headers, exc_info)
+            return start_response(status, headers)
+        # Ignore subsequent calls (caused by async cleanup errors in a2wsgi)
+        _write_debug('double_call.txt', f"IGNORED 2nd start_response call: {status}")
+        return lambda data: None  # dummy write callable
 
     try:
         from a2wsgi import ASGIMiddleware
