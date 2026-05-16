@@ -48,21 +48,33 @@ def application(environ, start_response):
                  f"application() called\nPATH: {environ.get('PATH_INFO', '?')}\n"
                  f"METHOD: {environ.get('REQUEST_METHOD', '?')}\n")
 
+    # Wrap start_response to detect if it's being called
+    sr_log = []
+    def wrapped_start_response(status, headers, exc_info=None):
+        sr_log.append(status)
+        _write_debug('start_response_debug.txt', f"start_response called with: {status}")
+        if exc_info:
+            return start_response(status, headers, exc_info)
+        return start_response(status, headers)
+
     try:
         from a2wsgi import ASGIMiddleware
         from app.main import app
 
         _write_debug('import_ok.txt', "Imports succeeded")
 
-        # Wrap FastAPI ASGI app to WSGI
         real_app = ASGIMiddleware(app)
-
-        # CRITICAL: consume the iterator INSIDE try/except
-        # so any async exceptions are caught here, not by Passenger
-        result = real_app(environ, start_response)
+        result = real_app(environ, wrapped_start_response)
         body = list(result)
 
-        _write_debug('response_ok.txt', f"Response generated: {len(body)} chunks")
+        if not sr_log:
+            # start_response was NEVER called - this causes "Server got itself in trouble"
+            _write_debug('no_start_response.txt',
+                        f"ERROR: start_response never called!\nbody chunks: {len(body)}\nbody: {body[:2]}")
+            start_response('500 Internal Server Error', [('Content-Type', 'application/json')])
+            return [json.dumps({"detail": "ASGI app did not produce a response (startup failed?)"}).encode()]
+
+        _write_debug('response_ok.txt', f"Response generated OK. status={sr_log[0]}, chunks={len(body)}")
         return body
 
     except Exception:
