@@ -28,11 +28,19 @@ async def test_registration():
                 password="password123"
             )
             
-            print("1. Attempting password hash...")
+            print("1. Attempting get_user_by_username...")
+            db_user = await db_service.get_user_by_username(session, user_create.username)
+            print(f"   Result: {db_user}")
+
+            print("2. Attempting get_user_by_email...")
+            db_email = await db_service.get_user_by_email(session, user_create.email)
+            print(f"   Result: {db_email}")
+
+            print("3. Attempting password hash...")
             hashed = auth_service.get_password_hash("password123")
             print(f"   Hash success: {hashed[:10]}...")
             
-            print("2. Attempting User instance generation and database commit...")
+            print("4. Attempting User instance generation and database commit...")
             user = await db_service.create_user(session, user_create, hashed)
             
             print(f"🎉 SIMULATION COMPLETED! Successfully created user ID: {user.id}")
